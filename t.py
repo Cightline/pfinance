@@ -1,13 +1,27 @@
 #!/usr/bin/python
+import os
 import json
 import requests
 import argparse
+import datetime
 
 
-def get_price(ticker):
-    rsp = requests.get('https://finance.google.com/finance?q=%s&output=json' % (ticker))
-    
-    if rsp.status_code == 200:
+def get_price(ticker, use_cache=False):
+
+    if use_cache:
+        with open(os.path.expanduser('~/.config/polybar/.cache/%s' % (ticker)), 'r') as t_data:
+            fin_data = json.load(t_data)
+
+            return fin_data
+
+
+    else:
+        rsp = requests.get('https://finance.google.com/finance?q=%s&output=json' % (ticker))
+
+
+        if rsp.status_code != 200 and not use_cache:
+            print('N/A')
+            exit(1)
 
         # This magic here is to cut out various leading characters from the JSON 
         # response, as well as trailing stuff (a terminating ']\n' sequence), and then
@@ -31,10 +45,12 @@ def get_price(ticker):
         # 'kr_recent_quarter_date', 'kr_annual_date', 'kr_ttm_date', 'keyratios', 'c', 'l', 'cp', 'ccol', 'op', 'hi', 'lo', 'vo', 'avvo', 'hi52', 'lo52',
         # 'mc', 'pe', 'fwpe', 'beta', 'eps', 'dy', 'ldiv', 'shares', 'instown', 'eo', 'sid', 'sname', 'iid', 'iname', 'related', 'summary', 
         # 'management', 'moreresources', 'events'
+
+        with open(os.path.expanduser('~/.config/polybar/.cache/%s') % (ticker), 'w') as w_data:
+            w_data.write(json.dumps(fin_data))
+
         return fin_data
 
-    else:
-        return None
 
 
 if __name__ == '__main__':
@@ -44,11 +60,22 @@ if __name__ == '__main__':
     parser.add_argument('--c',         action='store_true',  help='change in currency')
     parser.add_argument('--down-color', action='store',      help='hex value of the color when the ticker is down')
     parser.add_argument('--up-color',   action='store',      help='hex value of the color when the ticker is up')
+    parser.add_argument('--use-cache',  action='store_true', help='use the cache (mainly for testing purposes)', default=False)
 
     args = parser.parse_args()
 
     down_color = '%{F#bf0000}'
     up_color   = '%{F#4b9653}'
+    use_cache  = args.use_cache
+
+    now = datetime.datetime.utcnow()
+    #1430 2100
+    if now.hour < 14 and now.minute < 30:
+        use_cache = True
+
+    elif now.hour > 21 and now.minute > 0:
+        use_cache = True
+
 
     if args.down_color:
         down_color = args.down_color
@@ -59,10 +86,12 @@ if __name__ == '__main__':
 
 
     if args.ticker:
-        data = get_price(args.ticker)
+        data = get_price(args.ticker, use_cache=use_cache)
+
         
         if not data:
             print('N/A')
+            exit(1)
 
         if args.cp:
             change = float(data['cp'])
