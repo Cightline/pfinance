@@ -61,6 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('--down-color', action='store',      help='hex value of the color when the ticker is down')
     parser.add_argument('--up-color',   action='store',      help='hex value of the color when the ticker is up')
     parser.add_argument('--use-cache',  action='store_true', help='use the cache (mainly for testing purposes)', default=False)
+    parser.add_argument('--bitcoin',    action='store_true', help='pull Bitcoin data', default=False)
 
     args = parser.parse_args()
 
@@ -84,8 +85,40 @@ if __name__ == '__main__':
         up_color   = args.up_color
 
 
+    if args.bitcoin:
+        import gdax
 
-    if args.ticker:
+        public_client = gdax.PublicClient()
+
+        data = public_client.get_product_24hr_stats(product_id='BTC-USD')
+
+
+        last  = float(data['last'])
+        open_ = float(data['open'])
+    
+        # (Price Sold - Purchase Price) ÷ (Purchase Price)
+        if args.cp:
+            change = open_/last
+
+            if change < 0:
+                color = down_color
+
+            elif change > 0:
+                color = up_color
+
+
+            else:
+                color = ''
+
+            print('%s%4.2f (%4.2f%%)' % (color, last, change))
+
+
+        else:
+            print(last)
+
+    elif args.ticker:
+
+
         data = get_price(args.ticker, use_cache=use_cache)
 
         
