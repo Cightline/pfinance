@@ -92,13 +92,27 @@ if __name__ == '__main__':
 
         data = public_client.get_product_24hr_stats(product_id='BTC-USD')
 
+        if 'message' in data and 'maintenance' in data['message']:
+            if down_color:
+                print('%sMX' % (down_color))
+
+            else:
+                print('MX')
+
+            exit()
+
+
 
         last  = float(data['last'])
         open_ = float(data['open'])
     
         # (Price Sold - Purchase Price) ÷ (Purchase Price)
         if args.cp:
-            change = open_/last
+            # Decrease = Original Number - New Number
+            # % decreate = decrease/original
+
+            #change = open_/last
+            change = ((last - open_)/open_) * 100
 
             if change < 0:
                 color = down_color
